@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "description": "Dependency-free EPC QR/GiroCode payload core for browsers and Node.",
+  "main": "./libs/EPCcore.js",
+  "exports": "./libs/EPCcore.js",
   "scripts": {
     "test": "node --test"
   }

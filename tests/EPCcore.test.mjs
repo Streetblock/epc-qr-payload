@@ -1,6 +1,18 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { EpcCore, EpcValidationError } from '../libs/EPCcore.js'
+import {
+  EpcCore,
+  EpcError,
+  EpcValidationError,
+  formatIBAN,
+  generate,
+  isEpcQR,
+  parse,
+  parseOrThrow,
+  validate,
+  validateBIC,
+  validateIBAN,
+} from '../libs/EPCcore.js'
 
 test('serializes a minimal UTF-8 EPC payload without trailing newline', () => {
   const result = EpcCore.create({
@@ -215,4 +227,84 @@ test('parsing tolerates scanner BOM, header spaces and trailing newlines', () =>
   assert.equal(parsed.identification, 'SCT')
   assert.equal(parsed.name, 'Franz Mustermann')
   assert.equal(parsed.iban, 'DE71110220330123456789')
+})
+
+test('public generate accepts npm-friendly field aliases and options', () => {
+  const payload = generate({
+    recipient: "Fran\u00e7ois D'Alsace S.A.",
+    iban: 'FR1420041010050500013M02606',
+    message: 'Invoice 123',
+  }, {
+    encoding: 'ISO-8859-1',
+  })
+
+  const lines = payload.split('\n')
+  assert.equal(lines[2], '2')
+  assert.equal(lines[5], "Fran\u00e7ois D'Alsace S.A.")
+  assert.equal(lines[10], 'Invoice 123')
+})
+
+test('public generate maps version option into the payload model', () => {
+  assert.throws(() => generate({
+    recipient: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+  }, {
+    version: '001',
+  }), /BIC is mandatory/)
+})
+
+test('public parse returns a result object and parseOrThrow keeps throwing behavior', () => {
+  const payload = generate({
+    recipient: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+  })
+
+  const result = parse(payload)
+  assert.equal(result.valid, true)
+  assert.equal(result.data.name, 'Franz Mustermann')
+  assert.equal(result.error, null)
+
+  const invalid = parse('nope')
+  assert.equal(invalid.valid, false)
+  assert.match(invalid.error, /BCD/)
+  assert.throws(() => parseOrThrow('nope'), /BCD/)
+})
+
+test('public isEpcQR quickly detects EPC payloads', () => {
+  assert.equal(isEpcQR(generate({
+    recipient: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+  })), true)
+  assert.equal(isEpcQR('not an EPC QR payload'), false)
+})
+
+test('public validate returns validation result objects', () => {
+  assert.deepEqual(validate({
+    recipient: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+  }), {
+    valid: true,
+    errors: [],
+  })
+
+  const result = validate({
+    recipient: 'Franz Mustermann',
+    iban: 'DE00',
+  })
+  assert.equal(result.valid, false)
+  assert.equal(result.errors[0].field, 'iban')
+})
+
+test('public IBAN and BIC helpers validate and format values', () => {
+  assert.deepEqual(validateIBAN('DE71110220330123456789'), { valid: true })
+  assert.equal(validateIBAN('DE00').valid, false)
+  assert.equal(formatIBAN('DE71110220330123456789'), 'DE71 1102 2033 0123 4567 89')
+
+  assert.deepEqual(validateBIC('MARKDEF1100'), { valid: true })
+  assert.equal(validateBIC('').valid, false)
+  assert.deepEqual(validateBIC('', { allowEmpty: true }), { valid: true })
+})
+
+test('EpcError is a public alias for validation errors', () => {
+  assert.equal(EpcError, EpcValidationError)
 })

@@ -106,6 +106,80 @@ export class EpcValidationError extends Error {
   }
 }
 
+export { EpcValidationError as EpcError }
+
+export function generate(data, options = {}) {
+  return EpcCore.serialize(normalizePublicPaymentInput(data, options), normalizePublicOptions(options))
+}
+
+export function parseOrThrow(qrString, options = {}) {
+  return EpcCore.parse(qrString, normalizePublicOptions(options))
+}
+
+export function parse(qrString, options = {}) {
+  try {
+    return {
+      valid: true,
+      data: parseOrThrow(qrString, options),
+      error: null,
+    }
+  } catch (error) {
+    return {
+      valid: false,
+      data: null,
+      error: error instanceof Error ? error.message : String(error),
+      validationError: toValidationError(error),
+    }
+  }
+}
+
+export const parseSafe = parse
+
+export function isEpcQR(qrString) {
+  return parse(qrString).valid
+}
+
+export function validate(data, options = {}) {
+  try {
+    EpcCore.create(normalizePublicPaymentInput(data, options), normalizePublicOptions(options))
+    return {
+      valid: true,
+      errors: [],
+    }
+  } catch (error) {
+    return {
+      valid: false,
+      errors: [toValidationError(error)],
+    }
+  }
+}
+
+export function validateIBAN(iban) {
+  try {
+    validateIban(normalizeIban(iban))
+    return { valid: true }
+  } catch (error) {
+    return { valid: false, error: toValidationError(error) }
+  }
+}
+
+export function validateBIC(bic, options = {}) {
+  try {
+    const normalizedBic = normalizeText(bic ?? '', 'bic').toUpperCase()
+    if (!normalizedBic && !options.allowEmpty) {
+      throw new EpcValidationError('bic', 'BIC is required.')
+    }
+    validateBic(normalizedBic, options.version || DEFAULT_VERSION)
+    return { valid: true }
+  } catch (error) {
+    return { valid: false, error: toValidationError(error) }
+  }
+}
+
+export function formatIBAN(iban) {
+  return normalizeIban(iban).replace(/(.{4})/g, '$1 ').trim()
+}
+
 export function serializePayment(input, options = {}) {
   const model = normalizePayment(input, options)
   const lineEnding = normalizeLineEnding(options.lineEnding)
@@ -127,6 +201,58 @@ export function serializePayment(input, options = {}) {
   return trimTrailingEmptyLines(lines).join(lineEnding)
 }
 
+function normalizePublicPaymentInput(data, options = {}) {
+  if (!data || typeof data !== 'object') return data
+
+  const normalized = { ...data }
+  const publicOptions = normalizePublicOptions(options)
+
+  if (normalized.name === undefined && normalized.recipient !== undefined) {
+    normalized.name = normalized.recipient
+  }
+  if (normalized.version === undefined && publicOptions.version !== undefined) {
+    normalized.version = publicOptions.version
+  }
+  if (normalized.characterSet === undefined && publicOptions.characterSet !== undefined) {
+    normalized.characterSet = publicOptions.characterSet
+  }
+  if (normalized.remittanceText === undefined && normalized.message !== undefined) {
+    normalized.remittanceText = normalized.message
+  }
+  if (normalized.information === undefined && normalized.additionalInfo !== undefined) {
+    normalized.information = normalized.additionalInfo
+  }
+
+  return normalized
+}
+
+function normalizePublicOptions(options = {}) {
+  const normalized = { ...options }
+
+  if (normalized.characterSet === undefined && normalized.encoding !== undefined) {
+    normalized.characterSet = normalized.encoding
+  }
+  if (normalized.version !== undefined) {
+    normalized.version = String(normalized.version)
+  }
+
+  return normalized
+}
+
+function toValidationError(error) {
+  if (error instanceof EpcValidationError) {
+    return {
+      field: error.field,
+      message: error.message,
+    }
+  }
+
+  return {
+    field: 'unknown',
+    message: error instanceof Error ? error.message : String(error),
+  }
+}
+
 export function normalizePayment(input, options = {}) {
   if (!input || typeof input !== 'object') {
     throw new EpcValidationError('payment', 'Payment data must be an object.')
@@ -134,7 +260,7 @@ export function normalizePayment(input, options = {}) {
 
   const model = {
     version: normalizeFixed(input.version ?? DEFAULT_VERSION, 'version'),
-    characterSet: normalizeFixed(input.characterSet ?? DEFAULT_CHARSET, 'characterSet'),
+    characterSet: normalizeCharacterSetId(input.characterSet ?? DEFAULT_CHARSET),
     identification: normalizeFixed(input.identification ?? DEFAULT_IDENTIFICATION, 'identification'),
     bic: normalizeText(input.bic ?? '', 'bic').toUpperCase(),
     name: normalizeText(input.name, 'name'),

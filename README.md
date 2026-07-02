@@ -7,18 +7,54 @@ The library builds and parses the line-based EPC payload used for SEPA credit tr
 ## Example
 
 ```js
-import { EpcCore } from './libs/EPCcore.js'
+import { generate, parse, validateIBAN } from './libs/EPCcore.js'
 
-const epc = EpcCore.create({
-  name: 'Franz Mustermann',
+const payload = generate({
+  recipient: 'Franz Mustermann',
   iban: 'DE71110220330123456789',
   amount: 12.3,
-  remittanceText: 'Invoice 123',
+  message: 'Invoice 123',
 })
 
-console.log(epc.payload)
-console.log(epc.qrOptions)
+console.log(payload)
+console.log(parse(payload))
+console.log(validateIBAN('DE71110220330123456789'))
 ```
+
+## API
+
+### `generate(data, options?)`
+
+Generates an EPC QR payload string.
+
+Supported public aliases:
+
+- `recipient` maps to EPC beneficiary name.
+- `message` maps to unstructured remittance text.
+- `reference` maps to structured ISO 11649 creditor reference.
+- `encoding` maps to the EPC character set line.
+
+### `parse(qrString, options?)`
+
+Returns a result object:
+
+```js
+{
+  valid: true,
+  data: { /* normalized EPC payment data */ },
+  error: null
+}
+```
+
+Invalid payloads return `{ valid: false, data: null, error, validationError }`. Use `parseOrThrow(...)` or `EpcCore.parse(...)` when you want exception-based parsing.
+
+### Helpers
+
+- `isEpcQR(qrString)` quickly checks whether a string is parseable as EPC QR content.
+- `validate(data, options?)` returns `{ valid, errors }`.
+- `validateIBAN(iban)` returns `{ valid, error? }`.
+- `validateBIC(bic)` returns `{ valid, error? }`.
+- `formatIBAN(iban)` formats an IBAN in groups of four for display.
 
 ## Scope
 
