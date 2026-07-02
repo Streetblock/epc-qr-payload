@@ -120,6 +120,14 @@ test('rejects comma decimal separators in amount input', () => {
   }), /dot as decimal separator/)
 })
 
+test('rejects amount numeric parts longer than 12 characters', () => {
+  assert.throws(() => EpcCore.serialize({
+    name: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+    amount: 'EUR1234567890.12',
+  }), /up to 12 numeric amount characters/)
+})
+
 test('rejects remittance reference and remittance text together', () => {
   assert.throws(() => EpcCore.serialize({
     name: 'Franz Mustermann',
@@ -151,6 +159,19 @@ test('rejects structured references longer than 35 characters', () => {
     iban: 'DE71110220330123456789',
     remittanceReference: '123456789012345678901234567890123456',
   }), /remittanceReference must be between 0 and 35 characters/)
+})
+
+test('rejects control characters in generated text fields', () => {
+  assert.throws(() => EpcCore.serialize({
+    name: 'Franz\u0001Mustermann',
+    iban: 'DE71110220330123456789',
+  }), /control characters/)
+
+  assert.throws(() => EpcCore.serialize({
+    name: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+    remittanceText: 'Invoice\u0007123',
+  }), /control characters/)
 })
 
 test('rejects characters not encodable in selected ISO character set', () => {

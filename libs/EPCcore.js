@@ -277,12 +277,14 @@ export function normalizePayment(input, options = {}) {
   validateIdentification(model.identification, options)
   validateBic(model.bic, model.version)
   validateLength('name', model.name, 1, 70)
+  validateAlphaNumericText('name', model.name)
   validateIban(model.iban)
   if (model.amount) validateAmount(model.amount)
   validateLength('purpose', model.purpose, 0, 4)
   validatePurpose(model.purpose)
   validateRemittance(model.remittanceReference, model.remittanceText, options)
   validateLength('information', model.information, 0, 70)
+  validateAlphaNumericText('information', model.information)
   validateEncodableFields(model)
 
   return model
@@ -450,6 +452,7 @@ function validateBic(bic, version) {
   if (!/^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(bic)) {
     throw new EpcValidationError('bic', 'BIC must contain 8 or 11 uppercase letters/digits.')
   }
+  validateAlphaNumericText('bic', bic)
 }
 
 function validateLength(field, value, min, max) {
@@ -469,8 +472,8 @@ function validateIban(iban) {
 }
 
 function validateAmount(amount) {
-  if (!/^EUR\d{1,9}(\.\d{1,2})?$/.test(amount)) {
-    throw new EpcValidationError('amount', 'Amount must use EUR# with optional .# or .## decimals.')
+  if (amount.length > 15 || !/^EUR\d{1,9}(\.\d{1,2})?$/.test(amount)) {
+    throw new EpcValidationError('amount', 'Amount must use EUR plus up to 12 numeric amount characters.')
   }
   const value = Number(amount.slice(3))
   if (value < 0.01 || value > 999999999.99) {
@@ -490,7 +493,15 @@ function validateRemittance(reference, text, options = {}) {
   }
   validateLength('remittanceReference', reference, 0, 35)
   validateLength('remittanceText', text, 0, 140)
+  validateAlphaNumericText('remittanceReference', reference)
+  validateAlphaNumericText('remittanceText', text)
   if (reference && options.requireRfReference) validateCreditorReference(reference)
+}
+
+function validateAlphaNumericText(field, value) {
+  if (/[\u0000-\u001F\u007F]/.test(value)) {
+    throw new EpcValidationError(field, `${field} must not contain control characters.`)
+  }
 }
 
 function validateCreditorReference(reference) {
