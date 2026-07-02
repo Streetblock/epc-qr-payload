@@ -46,7 +46,7 @@ Returns a result object:
 }
 ```
 
-Invalid payloads return `{ valid: false, data: null, error, validationError }`. Use `parseOrThrow(...)` or `EpcCore.parse(...)` when you want exception-based parsing.
+Invalid payloads return `{ valid: false, data: null, error, validationError }`. Use `parseOrThrow(...)` or `EpcQrPayload.parse(...)` when you want exception-based parsing.
 
 ### Helpers
 
@@ -55,11 +55,12 @@ Invalid payloads return `{ valid: false, data: null, error, validationError }`. 
 - `validateIBAN(iban)` returns `{ valid, error? }`.
 - `validateBIC(bic)` returns `{ valid, error? }`.
 - `formatIBAN(iban)` formats an IBAN in groups of four for display.
+- `EpcQrPayload` exposes the lower-level class API. `EpcCore` remains available as a compatibility alias.
 
 ## Scope
 
 - Validates the 12 EPC data lines and preserves empty optional lines where needed.
-- Uses `LF` by default and never adds a trailing line break after the last populated element.
+- `generate(...)` uses `LF` to keep payloads compact and never adds a trailing line break after the last populated element. The lower-level class API can still serialize with `CRLF` when explicitly requested.
 - Supports EPC character set ids `1` to `8`.
 - Defaults to UTF-8 (`1`) and validates representability for ISO-8859 variants.
 - Validates IBAN checksum, BIC format, EPC amount format/range, purpose length and reference/text exclusivity.

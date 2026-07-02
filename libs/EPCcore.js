@@ -18,7 +18,7 @@ const CHARACTER_SETS = {
 
 const ISO_ENCODER_CACHE = new Map()
 
-export class EpcCore {
+export class EpcQrPayload {
   static QR_OPTIONS = Object.freeze({
     errorCorrectionLevel: 'M',
     maxVersion: 13,
@@ -34,12 +34,12 @@ export class EpcCore {
       payload,
       bytes,
       model,
-      qrOptions: { ...EpcCore.QR_OPTIONS },
+      qrOptions: { ...EpcQrPayload.QR_OPTIONS },
     }
   }
 
   static serialize(input, options = {}) {
-    return EpcCore.create(input, options).payload
+    return EpcQrPayload.create(input, options).payload
   }
 
   static parse(payload, options = {}) {
@@ -93,10 +93,12 @@ export class EpcCore {
   }
 
   static validate(input, options = {}) {
-    EpcCore.create(input, options)
+    EpcQrPayload.create(input, options)
     return true
   }
 }
+
+export { EpcQrPayload as EpcCore }
 
 export class EpcValidationError extends Error {
   constructor(field, message) {
@@ -109,11 +111,11 @@ export class EpcValidationError extends Error {
 export { EpcValidationError as EpcError }
 
 export function generate(data, options = {}) {
-  return EpcCore.serialize(normalizePublicPaymentInput(data, options), normalizePublicOptions(options))
+  return EpcQrPayload.serialize(normalizePublicPaymentInput(data, options), normalizeGenerateOptions(options))
 }
 
 export function parseOrThrow(qrString, options = {}) {
-  return EpcCore.parse(qrString, normalizePublicOptions(options))
+  return EpcQrPayload.parse(qrString, normalizePublicOptions(options))
 }
 
 export function parse(qrString, options = {}) {
@@ -141,7 +143,7 @@ export function isEpcQR(qrString) {
 
 export function validate(data, options = {}) {
   try {
-    EpcCore.create(normalizePublicPaymentInput(data, options), normalizePublicOptions(options))
+    EpcQrPayload.create(normalizePublicPaymentInput(data, options), normalizeGenerateOptions(options))
     return {
       valid: true,
       errors: [],
@@ -236,6 +238,12 @@ function normalizePublicOptions(options = {}) {
     normalized.version = String(normalized.version)
   }
 
+  return normalized
+}
+
+function normalizeGenerateOptions(options = {}) {
+  const normalized = normalizePublicOptions(options)
+  normalized.lineEnding = DEFAULT_LINE_ENDING
   return normalized
 }
 

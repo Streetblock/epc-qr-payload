@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   EpcCore,
   EpcError,
+  EpcQrPayload,
   EpcValidationError,
   formatIBAN,
   generate,
@@ -216,6 +217,18 @@ test('supports CRLF line endings consistently', () => {
   assert.equal(EpcCore.parse(payload).lineEnding, '\r\n')
 })
 
+test('public generate always uses LF to keep payloads compact', () => {
+  const payload = generate({
+    recipient: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+  }, {
+    lineEnding: '\r\n',
+  })
+
+  assert.equal(payload.includes('\r\n'), false)
+  assert.equal(payload.includes('\n'), true)
+})
+
 test('generation rejects INST unless explicitly allowed', () => {
   assert.throws(() => EpcCore.serialize({
     identification: 'INST',
@@ -344,4 +357,9 @@ test('public IBAN and BIC helpers validate and format values', () => {
 
 test('EpcError is a public alias for validation errors', () => {
   assert.equal(EpcError, EpcValidationError)
+})
+
+test('EpcQrPayload is the public class name and EpcCore remains an alias', () => {
+  assert.equal(EpcCore, EpcQrPayload)
+  assert.equal(typeof EpcQrPayload.serialize, 'function')
 })
