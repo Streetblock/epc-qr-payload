@@ -7,7 +7,7 @@ The library builds and parses the line-based EPC payload used for SEPA credit tr
 ## Example
 
 ```js
-import { generate, parse, validateIBAN } from './libs/EPCcore.js'
+import { generate, parse, validateIBAN } from './libs/EPCpayload.js'
 
 const payload = generate({
   recipient: 'Franz Mustermann',

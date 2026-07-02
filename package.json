@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "description": "Dependency-free EPC QR/GiroCode payload parser and serializer for browsers and Node.",
-  "main": "./libs/EPCcore.js",
-  "exports": "./libs/EPCcore.js",
+  "main": "./libs/EPCpayload.js",
+  "exports": "./libs/EPCpayload.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Streetblock/epc-qr-payload.git"

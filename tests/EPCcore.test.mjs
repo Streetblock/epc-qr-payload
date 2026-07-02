@@ -13,7 +13,7 @@ import {
   validate,
   validateBIC,
   validateIBAN,
-} from '../libs/EPCcore.js'
+} from '../libs/EPCpayload.js'
 
 test('serializes a minimal UTF-8 EPC payload without trailing newline', () => {
   const result = EpcCore.create({
