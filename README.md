@@ -31,7 +31,7 @@ Supported public aliases:
 
 - `recipient` maps to EPC beneficiary name.
 - `message` maps to unstructured remittance text.
-- `reference` maps to structured ISO 11649 creditor reference.
+- `reference` maps to structured remittance information (`AT-T009`, max. 35 characters). ISO 11649 RF creditor references are supported and can be required with `requireRfReference: true`.
 - `encoding` maps to the EPC character set line.
 
 ### `parse(qrString, options?)`
@@ -63,6 +63,7 @@ Invalid payloads return `{ valid: false, data: null, error, validationError }`. 
 - Supports EPC character set ids `1` to `8`.
 - Defaults to UTF-8 (`1`) and validates representability for ISO-8859 variants.
 - Validates IBAN checksum, BIC format, EPC amount format/range, purpose length and reference/text exclusivity.
+- Allows structured remittance information up to 35 characters; ISO 11649 RF checksum validation is available with `requireRfReference: true`.
 - Accepts EPC amount values such as `EUR1`, `EUR12.3` and `EUR12.30`.
 - Tolerates common scanner artifacts when parsing, including a leading BOM, spaces around header lines and trailing line breaks.
 - Parses EPC payloads back to plain JavaScript objects.

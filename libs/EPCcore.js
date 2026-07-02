@@ -281,7 +281,7 @@ export function normalizePayment(input, options = {}) {
   if (model.amount) validateAmount(model.amount)
   validateLength('purpose', model.purpose, 0, 4)
   validatePurpose(model.purpose)
-  validateRemittance(model.remittanceReference, model.remittanceText)
+  validateRemittance(model.remittanceReference, model.remittanceText, options)
   validateLength('information', model.information, 0, 70)
   validateEncodableFields(model)
 
@@ -484,13 +484,13 @@ function validatePurpose(purpose) {
   }
 }
 
-function validateRemittance(reference, text) {
+function validateRemittance(reference, text, options = {}) {
   if (reference && text) {
     throw new EpcValidationError('remittanceReference', 'Structured reference and remittance text are mutually exclusive.')
   }
-  validateLength('remittanceReference', reference, 0, 25)
+  validateLength('remittanceReference', reference, 0, 35)
   validateLength('remittanceText', text, 0, 140)
-  if (reference) validateCreditorReference(reference)
+  if (reference && options.requireRfReference) validateCreditorReference(reference)
 }
 
 function validateCreditorReference(reference) {

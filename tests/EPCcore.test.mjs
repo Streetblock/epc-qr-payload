@@ -129,12 +129,28 @@ test('rejects remittance reference and remittance text together', () => {
   }), /mutually exclusive/)
 })
 
-test('validates ISO 11649 RF reference checksum', () => {
+test('allows non-RF structured references up to 35 characters', () => {
+  assert.doesNotThrow(() => EpcCore.serialize({
+    name: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+    remittanceReference: 'INV-2026-0000000000000000000001',
+  }))
+})
+
+test('can require ISO 11649 RF reference checksum explicitly', () => {
   assert.throws(() => EpcCore.serialize({
     name: 'Franz Mustermann',
     iban: 'DE71110220330123456789',
     remittanceReference: 'RF00539007547034',
-  }), /checksum/)
+  }, { requireRfReference: true }), /checksum/)
+})
+
+test('rejects structured references longer than 35 characters', () => {
+  assert.throws(() => EpcCore.serialize({
+    name: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+    remittanceReference: '123456789012345678901234567890123456',
+  }), /remittanceReference must be between 0 and 35 characters/)
 })
 
 test('rejects characters not encodable in selected ISO character set', () => {
