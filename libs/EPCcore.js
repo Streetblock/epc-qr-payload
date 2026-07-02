@@ -48,7 +48,7 @@ export class EpcCore {
     const lines = text.split(lineEnding)
     const warnings = []
 
-    if (lines[0] !== SERVICE_TAG) {
+    if ((lines[0] || '').trim() !== SERVICE_TAG) {
       throw new EpcValidationError('serviceTag', 'EPC payload must start with BCD.')
     }
 
@@ -193,10 +193,12 @@ export function isEncodable(text, characterSet = DEFAULT_CHARSET) {
 }
 
 function normalizePayloadInput(payload, fallbackCharacterSet = DEFAULT_CHARSET) {
-  if (typeof payload === 'string') return payload
+  let text
+  if (typeof payload === 'string') return normalizeScannedPayloadText(payload)
   if (payload instanceof Uint8Array || Array.isArray(payload)) {
     const bytes = payload instanceof Uint8Array ? payload : Uint8Array.from(payload)
-    return decodePayload(bytes, detectCharacterSetFromBytes(bytes, fallbackCharacterSet))
+    text = decodePayload(bytes, detectCharacterSetFromBytes(bytes, fallbackCharacterSet))
+    return normalizeScannedPayloadText(text)
   }
   throw new EpcValidationError('payload', 'Payload must be a string or byte array.')
 }
@@ -204,8 +206,13 @@ function normalizePayloadInput(payload, fallbackCharacterSet = DEFAULT_CHARSET) 
 function detectCharacterSetFromBytes(bytes, fallbackCharacterSet) {
   const lines = []
   let current = ''
+  let start = 0
 
-  for (let i = 0; i < bytes.length && lines.length < 3; i += 1) {
+  if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+    start = 3
+  }
+
+  for (let i = start; i < bytes.length && lines.length < 3; i += 1) {
     const byte = bytes[i]
     if (byte === 0x0d) continue
     if (byte === 0x0a) {
@@ -218,7 +225,13 @@ function detectCharacterSetFromBytes(bytes, fallbackCharacterSet) {
   }
 
   if (lines.length < 3 && current) lines.push(current)
-  return lines[0] === SERVICE_TAG && lines[2] ? lines[2] : fallbackCharacterSet
+  return (lines[0] || '').trim() === SERVICE_TAG && lines[2] ? lines[2].trim() : fallbackCharacterSet
+}
+
+function normalizeScannedPayloadText(text) {
+  return text
+    .replace(/^\uFEFF/, '')
+    .replace(/(?:\r\n|\n|\r)+$/g, '')
 }
 
 function detectLineEnding(text) {
@@ -268,7 +281,7 @@ function normalizeAmount(value) {
     if (!Number.isFinite(value)) {
       throw new EpcValidationError('amount', 'Amount must be a finite number.')
     }
-    return `EUR${value.toFixed(2)}`
+    return `EUR${String(value)}`
   }
 
   const raw = String(value).trim()
@@ -276,11 +289,10 @@ function normalizeAmount(value) {
     throw new EpcValidationError('amount', 'Amount must use a dot as decimal separator.')
   }
   if (/^\d+(\.\d{1,2})?$/.test(raw)) {
-    return `EUR${Number(raw).toFixed(2)}`
+    return `EUR${raw}`
   }
   if (/^EUR\d+(\.\d{1,2})?$/.test(raw)) {
-    const numeric = raw.slice(3)
-    return `EUR${Number(numeric).toFixed(2)}`
+    return raw
   }
   return raw
 }
@@ -331,8 +343,8 @@ function validateIban(iban) {
 }
 
 function validateAmount(amount) {
-  if (!/^EUR\d{1,9}\.\d{2}$/.test(amount)) {
-    throw new EpcValidationError('amount', 'Amount must use the format EUR#.##.')
+  if (!/^EUR\d{1,9}(\.\d{1,2})?$/.test(amount)) {
+    throw new EpcValidationError('amount', 'Amount must use EUR# with optional .# or .## decimals.')
   }
   const value = Number(amount.slice(3))
   if (value < 0.01 || value > 999999999.99) {

@@ -26,7 +26,9 @@ console.log(epc.qrOptions)
 - Uses `LF` by default and never adds a trailing line break after the last populated element.
 - Supports EPC character set ids `1` to `8`.
 - Defaults to UTF-8 (`1`) and validates representability for ISO-8859 variants.
-- Validates IBAN checksum, BIC format, amount format/range, purpose length and reference/text exclusivity.
+- Validates IBAN checksum, BIC format, EPC amount format/range, purpose length and reference/text exclusivity.
+- Accepts EPC amount values such as `EUR1`, `EUR12.3` and `EUR12.30`.
+- Tolerates common scanner artifacts when parsing, including a leading BOM, spaces around header lines and trailing line breaks.
 - Parses EPC payloads back to plain JavaScript objects.
 
 ## Notes
