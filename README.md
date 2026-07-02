@@ -1,6 +1,6 @@
-# EPC Barcode Core
+# epc-qr-payload
 
-Dependency-free JavaScript core for EPC QR/GiroCode payloads.
+Dependency-free JavaScript parser and serializer for EPC QR/GiroCode payloads.
 
 The library builds and parses the line-based EPC payload used for SEPA credit transfer QR codes. It does not render a QR matrix itself; instead it returns the payload plus the mandated QR parameters (`errorCorrectionLevel: "M"`, `maxVersion: 13`), so a QR core/renderer can consume it.
 

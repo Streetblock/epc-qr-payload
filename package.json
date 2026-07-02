@@ -1,11 +1,27 @@
 {
-  "name": "epc-barcode-core",
+  "name": "epc-qr-payload",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Dependency-free EPC QR/GiroCode payload core for browsers and Node.",
+  "description": "Dependency-free EPC QR/GiroCode payload parser and serializer for browsers and Node.",
   "main": "./libs/EPCcore.js",
   "exports": "./libs/EPCcore.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Streetblock/epc-qr-payload.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Streetblock/epc-qr-payload/issues"
+  },
+  "homepage": "https://github.com/Streetblock/epc-qr-payload#readme",
+  "keywords": [
+    "epc",
+    "qr",
+    "girocode",
+    "sepa",
+    "payload",
+    "iban"
+  ],
   "scripts": {
     "test": "node --test"
   }
