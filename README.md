@@ -31,4 +31,4 @@ console.log(epc.qrOptions)
 
 ## Notes
 
-EPC069-12 v3.1 lists the identification code as fixed `SCT`. This implementation also accepts `INST` because many practical GiroCode discussions treat SEPA Instant as the natural companion format. Use `strictIdentification: true` to reject `INST`.
+EPC069-12 v3.1 lists the identification code as fixed `SCT`, so generation rejects `INST` by default. Use `allowInstant: true` when you explicitly want to create a practical SEPA Instant variant. Parsing remains tolerant and returns a warning when it sees `INST`.

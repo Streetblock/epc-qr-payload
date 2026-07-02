@@ -46,6 +46,7 @@ export class EpcCore {
     const text = normalizePayloadInput(payload, options.characterSet)
     const lineEnding = detectLineEnding(text)
     const lines = text.split(lineEnding)
+    const warnings = []
 
     if (lines[0] !== SERVICE_TAG) {
       throw new EpcValidationError('serviceTag', 'EPC payload must start with BCD.')
@@ -70,11 +71,16 @@ export class EpcCore {
       remittanceReference: padded[9],
       remittanceText: padded[10],
       information: padded[11],
-    }, options)
+    }, { ...options, allowInstant: true })
+
+    if (model.identification === 'INST') {
+      warnings.push('INST is outside strict EPC069-12 v3.1; SCT is the fixed identification code.')
+    }
 
     return {
       ...model,
       lineEnding,
+      warnings,
     }
   }
 
@@ -292,7 +298,7 @@ function validateCharacterSet(characterSet) {
 }
 
 function validateIdentification(identification, options = {}) {
-  const allowed = options.strictIdentification ? ['SCT'] : ['SCT', 'INST']
+  const allowed = options.allowInstant ? ['SCT', 'INST'] : ['SCT']
   if (!allowed.includes(identification)) {
     throw new EpcValidationError('identification', `Identification must be ${allowed.join(' or ')}.`)
   }

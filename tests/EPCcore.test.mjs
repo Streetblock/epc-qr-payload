@@ -130,10 +130,33 @@ test('supports CRLF line endings consistently', () => {
   assert.equal(EpcCore.parse(payload).lineEnding, '\r\n')
 })
 
-test('strict identification rejects INST when requested', () => {
+test('generation rejects INST unless explicitly allowed', () => {
   assert.throws(() => EpcCore.serialize({
     identification: 'INST',
     name: 'Franz Mustermann',
     iban: 'DE71110220330123456789',
-  }, { strictIdentification: true }), /Identification must be SCT/)
+  }), /Identification must be SCT/)
+
+  assert.doesNotThrow(() => EpcCore.serialize({
+    identification: 'INST',
+    name: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+  }, { allowInstant: true }))
+})
+
+test('parsing tolerates INST and returns a compatibility warning', () => {
+  const payload = [
+    'BCD',
+    '002',
+    '1',
+    'INST',
+    '',
+    'Franz Mustermann',
+    'DE71110220330123456789',
+  ].join('\n')
+
+  const parsed = EpcCore.parse(payload)
+  assert.equal(parsed.identification, 'INST')
+  assert.equal(parsed.warnings.length, 1)
+  assert.match(parsed.warnings[0], /outside strict EPC069-12/)
 })
