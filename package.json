@@ -1,0 +1,10 @@
+{
+  "name": "epc-barcode-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dependency-free EPC QR/GiroCode payload core for browsers and Node.",
+  "scripts": {
+    "test": "node --test"
+  }
+}
