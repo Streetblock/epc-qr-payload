@@ -221,6 +221,9 @@ function normalizePublicPaymentInput(data, options = {}) {
   if (normalized.characterSet === undefined && publicOptions.characterSet !== undefined) {
     normalized.characterSet = publicOptions.characterSet
   }
+  if (normalized.currency === undefined && publicOptions.currency !== undefined) {
+    normalized.currency = publicOptions.currency
+  }
   if (normalized.remittanceText === undefined && normalized.message !== undefined) {
     normalized.remittanceText = normalized.message
   }
@@ -239,6 +242,9 @@ function normalizePublicOptions(options = {}) {
   }
   if (normalized.version !== undefined) {
     normalized.version = String(normalized.version)
+  }
+  if (normalized.currency !== undefined) {
+    normalized.currency = normalizeCurrency(normalized.currency)
   }
 
   return normalized
@@ -414,9 +420,9 @@ function normalizeIban(value) {
   return normalizeText(value, 'iban').replace(/\s+/g, '').toUpperCase()
 }
 
-function normalizeAmount(value, currency = 'EUR') {
+function normalizeAmount(value, currency) {
   if (value === '' || value === null || value === undefined) return ''
-  const normalizedCurrency = normalizeCurrency(currency)
+  const normalizedCurrency = normalizeCurrency(currency ?? 'EUR')
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) {
       throw new EpcValidationError('amount', 'Amount must be a finite number.')
@@ -432,7 +438,11 @@ function normalizeAmount(value, currency = 'EUR') {
     return `${normalizedCurrency}${raw}`
   }
   if (/^[A-Za-z]{3}\d+(\.\d{1,2})?$/.test(raw)) {
-    return `${raw.slice(0, 3).toUpperCase()}${raw.slice(3)}`
+    const amountCurrency = raw.slice(0, 3).toUpperCase()
+    if (currency !== undefined && amountCurrency !== normalizedCurrency) {
+      throw new EpcValidationError('currency', 'Currency option must match the amount prefix.')
+    }
+    return `${amountCurrency}${raw.slice(3)}`
   }
   return raw
 }

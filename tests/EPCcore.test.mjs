@@ -130,6 +130,31 @@ test('allows non-EUR 3-letter currencies with generation warnings', () => {
     amount: 12.3,
     currency: 'usd',
   }), /\nUSD12\.3$/)
+
+  assert.match(generate({
+    recipient: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+    amount: '12.30',
+  }, {
+    currency: 'CHF',
+  }), /\nCHF12\.30$/)
+})
+
+test('rejects conflicting amount prefix and currency option', () => {
+  assert.throws(() => generate({
+    recipient: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+    amount: 'CHF12.30',
+    currency: 'EUR',
+  }), /Currency option must match/)
+
+  assert.throws(() => generate({
+    recipient: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+    amount: 'USD12.30',
+  }, {
+    currency: 'CHF',
+  }), /Currency option must match/)
 })
 
 test('parses non-EUR currencies and returns a warning', () => {

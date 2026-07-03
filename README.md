@@ -67,6 +67,7 @@ Invalid payloads return `{ valid: false, data: null, error, validationError }`. 
 - Allows structured remittance information up to 35 characters; ISO 11649 RF checksum validation is available with `requireRfReference: true`.
 - Accepts EPC amount values such as `EUR1`, `EUR12.3` and `EUR12.30`.
 - Allows other 3-letter currency prefixes such as `CHF12.30` for practical interoperability, but returns warnings because strict EPC069-12 v3.1 uses EUR.
+- `currency` can be passed for unprefixed amounts, for example `{ amount: '12.30', currency: 'CHF' }`. When the amount already contains a prefix, an explicit `currency` must match it.
 - Tolerates common scanner artifacts when parsing, including a leading BOM, spaces around header lines and trailing line breaks.
 - Parses EPC payloads back to plain JavaScript objects.
 
