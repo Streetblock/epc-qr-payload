@@ -28,12 +28,14 @@ export class EpcQrPayload {
     const model = normalizePayment(input, options)
     const payload = serializePayment(model, options)
     const bytes = encodePayload(payload, model.characterSet)
+    const warnings = collectWarnings(model)
     validatePayloadSize(bytes)
 
     return {
       payload,
       bytes,
       model,
+      warnings,
       qrOptions: { ...EpcQrPayload.QR_OPTIONS },
     }
   }
@@ -46,8 +48,6 @@ export class EpcQrPayload {
     const text = normalizePayloadInput(payload, options.characterSet)
     const lineEnding = detectLineEnding(text)
     const lines = text.split(lineEnding)
-    const warnings = []
-
     if ((lines[0] || '').trim() !== SERVICE_TAG) {
       throw new EpcValidationError('serviceTag', 'EPC payload must start with BCD.')
     }
@@ -73,6 +73,7 @@ export class EpcQrPayload {
       information: padded[11],
     }, { ...options, allowInstant: true })
 
+    const warnings = collectWarnings(model)
     if (model.identification === 'INST') {
       warnings.push('INST is outside strict EPC069-12 v3.1; SCT is the fixed identification code.')
     }
@@ -143,15 +144,17 @@ export function isEpcQR(qrString) {
 
 export function validate(data, options = {}) {
   try {
-    EpcQrPayload.create(normalizePublicPaymentInput(data, options), normalizeGenerateOptions(options))
+    const result = EpcQrPayload.create(normalizePublicPaymentInput(data, options), normalizeGenerateOptions(options))
     return {
       valid: true,
       errors: [],
+      warnings: result.warnings,
     }
   } catch (error) {
     return {
       valid: false,
       errors: [toValidationError(error)],
+      warnings: [],
     }
   }
 }
@@ -273,7 +276,7 @@ export function normalizePayment(input, options = {}) {
     bic: normalizeText(input.bic ?? '', 'bic').toUpperCase(),
     name: normalizeText(input.name, 'name'),
     iban: normalizeIban(input.iban),
-    amount: normalizeAmount(input.amount ?? ''),
+    amount: normalizeAmount(input.amount ?? '', input.currency),
     purpose: normalizeText(input.purpose ?? '', 'purpose').toUpperCase(),
     remittanceReference: normalizeText(input.remittanceReference ?? input.reference ?? '', 'remittanceReference').toUpperCase(),
     remittanceText: normalizeText(input.remittanceText ?? input.text ?? '', 'remittanceText'),
@@ -411,13 +414,14 @@ function normalizeIban(value) {
   return normalizeText(value, 'iban').replace(/\s+/g, '').toUpperCase()
 }
 
-function normalizeAmount(value) {
+function normalizeAmount(value, currency = 'EUR') {
   if (value === '' || value === null || value === undefined) return ''
+  const normalizedCurrency = normalizeCurrency(currency)
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) {
       throw new EpcValidationError('amount', 'Amount must be a finite number.')
     }
-    return `EUR${String(value)}`
+    return `${normalizedCurrency}${String(value)}`
   }
 
   const raw = String(value).trim()
@@ -425,12 +429,20 @@ function normalizeAmount(value) {
     throw new EpcValidationError('amount', 'Amount must use a dot as decimal separator.')
   }
   if (/^\d+(\.\d{1,2})?$/.test(raw)) {
-    return `EUR${raw}`
+    return `${normalizedCurrency}${raw}`
   }
-  if (/^EUR\d+(\.\d{1,2})?$/.test(raw)) {
-    return raw
+  if (/^[A-Za-z]{3}\d+(\.\d{1,2})?$/.test(raw)) {
+    return `${raw.slice(0, 3).toUpperCase()}${raw.slice(3)}`
   }
   return raw
+}
+
+function normalizeCurrency(value) {
+  const currency = String(value ?? 'EUR').trim().toUpperCase()
+  if (!/^[A-Z]{3}$/.test(currency)) {
+    throw new EpcValidationError('currency', 'Currency must be a 3-letter ISO-style code.')
+  }
+  return currency
 }
 
 function validateVersion(version) {
@@ -480,13 +492,22 @@ function validateIban(iban) {
 }
 
 function validateAmount(amount) {
-  if (amount.length > 15 || !/^EUR\d{1,9}(\.\d{1,2})?$/.test(amount)) {
-    throw new EpcValidationError('amount', 'Amount must use EUR plus up to 12 numeric amount characters.')
+  const match = amount.match(/^([A-Z]{3})(\d{1,9}(\.\d{1,2})?)$/)
+  if (amount.length > 15 || !match) {
+    throw new EpcValidationError('amount', 'Amount must use a 3-letter currency plus up to 12 numeric amount characters.')
   }
-  const value = Number(amount.slice(3))
+  const value = Number(match[2])
   if (value < 0.01 || value > 999999999.99) {
-    throw new EpcValidationError('amount', 'Amount must be between EUR0.01 and EUR999999999.99.')
+    throw new EpcValidationError('amount', 'Amount must be between 0.01 and 999999999.99.')
   }
+}
+
+function collectWarnings(model) {
+  const warnings = []
+  if (model.amount && !model.amount.startsWith('EUR')) {
+    warnings.push(`Currency ${model.amount.slice(0, 3)} is outside strict EPC069-12 v3.1; EUR is the standard currency.`)
+  }
+  return warnings
 }
 
 function validatePurpose(purpose) {

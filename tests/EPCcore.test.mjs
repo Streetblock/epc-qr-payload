@@ -113,6 +113,43 @@ test('accepts EPC amount forms with zero, one or two decimals', () => {
   }), /\nEUR12\.30$/)
 })
 
+test('allows non-EUR 3-letter currencies with generation warnings', () => {
+  const result = EpcQrPayload.create({
+    name: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+    amount: 'CHF12.30',
+  })
+
+  assert.match(result.payload, /\nCHF12\.30$/)
+  assert.equal(result.warnings.length, 1)
+  assert.match(result.warnings[0], /Currency CHF is outside strict EPC069-12/)
+
+  assert.match(generate({
+    recipient: 'Franz Mustermann',
+    iban: 'DE71110220330123456789',
+    amount: 12.3,
+    currency: 'usd',
+  }), /\nUSD12\.3$/)
+})
+
+test('parses non-EUR currencies and returns a warning', () => {
+  const payload = [
+    'BCD',
+    '002',
+    '1',
+    'SCT',
+    '',
+    'Franz Mustermann',
+    'DE71110220330123456789',
+    'CHF12.30',
+  ].join('\n')
+
+  const parsed = EpcQrPayload.parse(payload)
+  assert.equal(parsed.amount, 'CHF12.30')
+  assert.equal(parsed.warnings.length, 1)
+  assert.match(parsed.warnings[0], /Currency CHF is outside strict EPC069-12/)
+})
+
 test('rejects comma decimal separators in amount input', () => {
   assert.throws(() => EpcCore.serialize({
     name: 'Franz Mustermann',
@@ -335,6 +372,7 @@ test('public validate returns validation result objects', () => {
   }), {
     valid: true,
     errors: [],
+    warnings: [],
   })
 
   const result = validate({
@@ -343,6 +381,7 @@ test('public validate returns validation result objects', () => {
   })
   assert.equal(result.valid, false)
   assert.equal(result.errors[0].field, 'iban')
+  assert.deepEqual(result.warnings, [])
 })
 
 test('public IBAN and BIC helpers validate and format values', () => {
